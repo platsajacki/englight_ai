@@ -1,0 +1,67 @@
+[project]
+name = "EnglightAI"
+version = "0.0.0"
+requires-python = ">=3.13"
+
+[project.urls]
+Homepage = "https://github.com/platsajacki/englight_ai"
+Repository = "https://github.com/platsajacki/englight_ai"
+
+[tool.black]
+line-length = 120
+target-version = ['py313']
+exclude = '''
+/(
+  | venv
+  | .mypy_cache
+  | migrations
+)/
+'''
+skip-string-normalization = true
+
+[tool.flake8]
+max-line-length = 120
+exclude = [
+    'static',
+    'migrations',
+    '__pycache__',
+    'venv',
+]
+
+[tool.flake8.ignore]
+E203 = 'whitespace before ":"'
+W503 = 'line break before binary operator'
+E701 = 'multiple statements on one line (colon)'
+
+[tool.isort]
+profile = 'black'
+line_length = 120
+known_pytest = ['pytest', 'pytest_lazy_fixtures', 'pytest_mock']
+known_aiogram = ['aiogram']
+sections = [
+    'FUTURE',
+    'PYTEST',
+    'STDLIB',
+    'AIOGRAM',
+    'THIRDPARTY',
+    'FIRSTPARTY',
+    'LOCALFOLDER'
+]
+use_parentheses = true
+include_trailing_comma = true
+multi_line_output = 3
+skip = ['migrations', 'venv']
+
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+norecursedirs = ["env/*", "venv/*"]
+addopts = ["-s", "-p", "no:cacheprovider"]
+testpaths = ["src/_tests/"]
+python_files = ["test_*.py"]
+
+
+[tool.coverage.run]
+omit = [
+    "*/_tests/*",
+]
