@@ -2,31 +2,39 @@ import json
 from dataclasses import dataclass
 from logging import getLogger
 
-import requests
+from httpx import AsyncClient, RequestError
 
-from constants import GEMINI_BASE_URL, GEMINI_KEY, NOT_PROCESSED, PROMPT, NotProccesed
-from data_types import ExampleData, WordData
-from decorators import retry_request
+from constants import DEFAULT_TRANSLATE_PROMPT, GEMINI_BASE_URL, GEMINI_KEY, NOT_PROCESSED, NotProccesed, PromptName
+from core.data_types import ExampleData, WordData
+from core.decorators import retry_request
+from database.database import db
+from database.managers import PromptManager
 
 logger = getLogger(__name__)
 
 
 @retry_request()
-def request_gemini(prompt: str) -> dict | NotProccesed:
+async def request_gemini(prompt: str) -> dict | NotProccesed:
     headers = {'Content-Type': 'application/json'}
-    data = {
-        'contents': [{'parts': [{'text': prompt}]}],
-    }
     params = {'key': GEMINI_KEY}
-    response = requests.post(GEMINI_BASE_URL, headers=headers, json=data, params=params)
-    response.raise_for_status()
-    return response.json()
+    data = {'contents': [{'parts': [{'text': prompt}]}]}
+    async with AsyncClient(timeout=30.0) as client:
+        response = await client.post(GEMINI_BASE_URL, headers=headers, json=data, params=params)
+        response.raise_for_status()
+        return response.json()
 
 
 @dataclass
 class GeminiEnglight:
     message: str
-    PROMPT: str = PROMPT
+
+    async def get_prompt(self) -> str:
+        prompt_manager = PromptManager(db)
+        prompt = await prompt_manager.get_or_create_by_name(PromptName.TRANSLATE, DEFAULT_TRANSLATE_PROMPT)
+        if not prompt.text:
+            logger.error('Prompt text is empty for prompt name: %s', PromptName.TRANSLATE)
+            return DEFAULT_TRANSLATE_PROMPT
+        return prompt.text
 
     def extract_words(self, answer: dict) -> str | NotProccesed:
         cleared_answer = (
@@ -74,13 +82,14 @@ class GeminiEnglight:
         words_list = words.get('words', [])
         return self.create_messages(words_list) if words_list else []
 
-    def __call__(self) -> dict | list[NotProccesed]:
+    async def __call__(self) -> dict | list[NotProccesed]:
         try:
             logger.info('Requesting Gemini API with message: %s', self.message)
-            prompt = self.PROMPT.format(message=self.message)
-            response = request_gemini(prompt)
+            template = await self.get_prompt()
+            prompt = template.format(message=self.message)
+            response = await request_gemini(prompt)
             return self.process_answer(response)
-        except requests.RequestException as e:
+        except RequestError as e:
             logger.error('Request to Gemini API failed:\n%s', e)
             return []
         except Exception as e:
