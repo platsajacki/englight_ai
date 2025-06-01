@@ -25,7 +25,7 @@ class PromptName:
     TRANSLATE = 'translate'
 
 
-DEFAULT_TRANSLATE_PROMPT = getenv('DEFAULT_TRANSLATE_PROMPT', 'Переведи слово или фразу на английском')
+DEFAULT_TRANSLATE_PROMPT = 'Переведи слово или фразу на английском и пришли в фомите JSON:\n'
 JSON_FORMAT = '''
 {{
   "words": [
