@@ -8,7 +8,7 @@ from constants import DEFAULT_TRANSLATE_PROMPT, GEMINI_BASE_URL, GEMINI_KEY, NOT
 from core.data_types import ExampleData, WordData
 from core.decorators import retry_request
 from database.database import db
-from database.managers import PromptManager
+from database.managers import PromptManager, WordManager
 
 logger = getLogger(__name__)
 
@@ -54,7 +54,21 @@ class GeminiEnglight:
             logger.error('JSON decoding error: %s', json_string)
             return NOT_PROCESSED
 
-    def create_messages(self, words: list) -> list[str]:
+    async def create_word_object(self, word_data: WordData) -> None:
+        try:
+            if not isinstance(word_data, WordData) or not word_data.word:
+                logger.error('Invalid WordData object: %s', word_data)
+                return
+            manager = WordManager(db)
+            word = await manager.get_by_word(word_data.word)
+            if word:
+                logger.info('Word object already exists for word: %s', word_data.word)
+                return
+            await manager.create_from_data(word_data)
+        except Exception as e:
+            logger.error('Error creating word object from WordData: %s\nError: %s', word_data, e)
+
+    async def create_messages(self, words: list) -> list[str]:
         messages = []
         for word in words:
             if not isinstance(word, dict):
@@ -65,6 +79,7 @@ class GeminiEnglight:
                 examples = word.pop('examples', [])
                 example_objects = [ExampleData(**example) for example in examples]
                 word_data = WordData(examples=example_objects, **word)
+                await self.create_word_object(word_data)
             except TypeError as e:
                 msg = 'Error creating WordData from word: %s\nError: %s' % (str(word), str(e))
                 logger.error(msg)
@@ -72,7 +87,7 @@ class GeminiEnglight:
             messages.append(word_data.create_message())
         return messages
 
-    def process_answer(self, answer: dict) -> dict | list:
+    async def process_answer(self, answer: dict) -> dict | list:
         cleared_answer = self.extract_words(answer)
         if cleared_answer == NOT_PROCESSED:
             return []
@@ -80,7 +95,7 @@ class GeminiEnglight:
         if not isinstance(words, dict):
             return []
         words_list = words.get('words', [])
-        return self.create_messages(words_list) if words_list else []
+        return await self.create_messages(words_list) if words_list else []
 
     async def __call__(self) -> dict | list[NotProccesed]:
         try:
@@ -88,7 +103,9 @@ class GeminiEnglight:
             template = await self.get_prompt()
             prompt = template.format(message=self.message)
             response = await request_gemini(prompt)
-            return self.process_answer(response)
+            answers = await self.process_answer(response)
+            logger.info('Received response from Gemini API: %s', answers)
+            return answers
         except RequestError as e:
             logger.error('Request to Gemini API failed:\n%s', e)
             return []

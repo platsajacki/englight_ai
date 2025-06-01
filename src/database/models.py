@@ -23,7 +23,7 @@ class Word(Base):
     __tablename__ = 'words'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    word: Mapped[Optional[str]] = mapped_column(String(500))
+    word: Mapped[Optional[str]] = mapped_column(String(500), unique=True)
     transcription: Mapped[Optional[str]] = mapped_column(String(500))
     translation: Mapped[Optional[str]] = mapped_column(String(500))
     part_of_speech: Mapped[Optional[str]] = mapped_column(String(100))
