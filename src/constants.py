@@ -1,6 +1,8 @@
 from os import getenv
 from typing import Literal
 
+from httpx import Proxy
+
 GEMINI_KEY = getenv('GEMINI_KEY')
 if not GEMINI_KEY:
     raise ValueError('GEMINI_KEY environment variable is not set.')
@@ -19,6 +21,21 @@ CHAT_ID = getenv('CHAT_ID', '0')
 ALLOWED_CHATS_FROM_ENV = set(getenv('ALLOWED_CHATS', '').split(', '))
 ALLOWED_CHATS_FOR_SAVING_TO_DB = {ADMIN_ID, CHAT_ID}
 ALLOWED_CHATS = ALLOWED_CHATS_FOR_SAVING_TO_DB | ALLOWED_CHATS_FROM_ENV
+
+USE_PROXY = bool(int(getenv('USE_PROXY', '0')))
+PROXY_IP = getenv('PROXY_IP', '')
+PROXY_PORT = getenv('PROXY_PORT', '')
+PROXY_USERNAME = getenv('PROXY_USERNAME', '')
+PROXY_PASSWORD = getenv('PROXY_PASSWORD', '')
+
+PROXY = None
+if USE_PROXY:
+    if not (PROXY_IP and PROXY_PORT):
+        raise ValueError('PROXY_IP and PROXY_PORT must be set when USE_PROXY is enabled.')
+    PROXY = Proxy(
+        f'http://{PROXY_USERNAME}:{PROXY_PASSWORD}',
+        auth=(PROXY_USERNAME, PROXY_PASSWORD),
+    )
 
 
 class PromptName:

@@ -4,7 +4,15 @@ from logging import getLogger
 
 from httpx import AsyncClient, RequestError
 
-from constants import DEFAULT_TRANSLATE_PROMPT, GEMINI_BASE_URL, GEMINI_KEY, NOT_PROCESSED, NotProccesed, PromptName
+from constants import (
+    DEFAULT_TRANSLATE_PROMPT,
+    GEMINI_BASE_URL,
+    GEMINI_KEY,
+    NOT_PROCESSED,
+    PROXY,
+    NotProccesed,
+    PromptName,
+)
 from core.data_types import ExampleData, WordData
 from core.decorators import retry_request
 from database.database import db
@@ -18,7 +26,7 @@ async def request_gemini(prompt: str) -> dict | NotProccesed:
     headers = {'Content-Type': 'application/json'}
     params = {'key': GEMINI_KEY}
     data = {'contents': [{'parts': [{'text': prompt}]}]}
-    async with AsyncClient(timeout=30.0) as client:
+    async with AsyncClient(timeout=30.0, proxy=PROXY) as client:
         response = await client.post(GEMINI_BASE_URL, headers=headers, json=data, params=params)
         response.raise_for_status()
         return response.json()
