@@ -1,0 +1,14 @@
+volumes:
+  db_data:
+
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - db_data:/home/app/words.db
+    command: ["python3.13", "main.py"]
