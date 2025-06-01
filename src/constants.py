@@ -14,6 +14,12 @@ GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemin
 NotProccesed = Literal['Не обработано']
 NOT_PROCESSED: NotProccesed = 'Не обработано'
 
+ADMIN_ID = getenv('ADMIN_ID', '0')
+CHAT_ID = getenv('CHAT_ID', '0')
+ALLOWED_CHATS_FROM_ENV = set(getenv('ALLOWED_CHATS', '').split(', '))
+ALLOWED_CHATS_FOR_SAVING_TO_DB = {ADMIN_ID, CHAT_ID}
+ALLOWED_CHATS = ALLOWED_CHATS_FOR_SAVING_TO_DB | ALLOWED_CHATS_FROM_ENV
+
 
 class PromptName:
     TRANSLATE = 'translate'

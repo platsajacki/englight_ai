@@ -15,17 +15,18 @@ from core.gemini import GeminiEnglight
 from database.database import db
 from database.managers import PromptManager
 from telegram.bot import bot, dp, router
+from telegram.filters import access_filter
 from telegram.states import PromptStates
 
 
-@router.message(CommandStart())
+@router.message(CommandStart(), access_filter)
 async def command_start_handler(message: Message) -> None:
     if not message.from_user:
         return
     await message.answer(f'Hello, {message.from_user.full_name}!')
 
 
-@router.message(Command('update_translate_prompt'))
+@router.message(Command('update_translate_prompt'), access_filter)
 async def update_translate_prompt_handler(message: Message, state: FSMContext) -> None:
     if not message.from_user:
         return
@@ -33,7 +34,7 @@ async def update_translate_prompt_handler(message: Message, state: FSMContext) -
     await state.set_state(PromptStates.waiting_for_translate_prompt)
 
 
-@router.message(PromptStates.waiting_for_translate_prompt)
+@router.message(PromptStates.waiting_for_translate_prompt, access_filter)
 async def waiting_for_translate_prompt_handler(message: Message, state: FSMContext) -> None:
     if not message.from_user:
         return
@@ -53,7 +54,7 @@ async def waiting_for_translate_prompt_handler(message: Message, state: FSMConte
     await state.clear()
 
 
-@router.message(StateFilter(None))
+@router.message(StateFilter(None), access_filter)
 async def handle_all_messages(message: Message) -> None:
     text = message.text
     if not text:
