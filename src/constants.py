@@ -33,7 +33,7 @@ if USE_PROXY:
     if not (PROXY_IP and PROXY_PORT):
         raise ValueError('PROXY_IP and PROXY_PORT must be set when USE_PROXY is enabled.')
     PROXY = Proxy(
-        f'http://{PROXY_USERNAME}:{PROXY_PASSWORD}',
+        f'http://{PROXY_IP}:{PROXY_PORT}',
         auth=(PROXY_USERNAME, PROXY_PASSWORD),
     )
 
