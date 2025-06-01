@@ -10,7 +10,7 @@ from aiogram.types import Message
 
 from dotenv import load_dotenv
 
-from constants import JSON_FORMAT, PromptName
+from constants import ALLOWED_CHATS_FOR_SAVING_TO_DB, JSON_FORMAT, PromptName
 from core.gemini import GeminiEnglight
 from database.database import db
 from database.managers import PromptManager
@@ -59,7 +59,8 @@ async def handle_all_messages(message: Message) -> None:
     text = message.text
     if not text:
         return
-    answers = await GeminiEnglight(text)()
+    save_to_db = str(message.chat.id) in ALLOWED_CHATS_FOR_SAVING_TO_DB
+    answers = await GeminiEnglight(text, save_to_db)()
     for answer in answers:
         await message.answer(str(answer), parse_mode=ParseMode.HTML)
 

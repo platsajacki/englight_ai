@@ -27,6 +27,7 @@ async def request_gemini(prompt: str) -> dict | NotProccesed:
 @dataclass
 class GeminiEnglight:
     message: str
+    save_to_db: bool = True
 
     async def get_prompt(self) -> str:
         prompt_manager = PromptManager(db)
@@ -79,7 +80,9 @@ class GeminiEnglight:
                 examples = word.pop('examples', [])
                 example_objects = [ExampleData(**example) for example in examples]
                 word_data = WordData(examples=example_objects, **word)
-                await self.create_word_object(word_data)
+                if self.save_to_db:
+                    logger.info('Creating WordData object for word: %s', word_data.word)
+                    await self.create_word_object(word_data)
             except TypeError as e:
                 msg = 'Error creating WordData from word: %s\nError: %s' % (str(word), str(e))
                 logger.error(msg)
