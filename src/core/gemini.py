@@ -2,7 +2,7 @@ import json
 from dataclasses import dataclass
 from http import HTTPStatus
 from logging import getLogger
-
+import random
 from httpx import AsyncClient, HTTPStatusError, RequestError
 
 from constants import (
@@ -28,23 +28,12 @@ async def request_gemini(prompt: str) -> dict | NotProccesed:
     params = {'key': GEMINI_KEY}
     data = {'contents': [{'parts': [{'text': prompt}]}]}
     async with AsyncClient(timeout=30.0, proxy=PROXY) as client:
-        for model in GEMINI_MODELS:
-            base_url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
-            try:
-                response = await client.post(base_url, headers=headers, json=data, params=params)
-                response.raise_for_status()
-                logger.info(f'✅ Ответ от модели: {model}')
-                return response.json()
-            except HTTPStatusError as e:
-                if e.response.status_code == HTTPStatus.SERVICE_UNAVAILABLE:
-                    logger.warning('Service Unavailable, retrying...')
-                    continue
-                logger.error('HTTP error occurred: %s', e.response.text)
-                raise e
-            except RequestError as e:
-                logger.error('Request error occurred: %s', e)
-                continue
-        raise Exception()
+        model = random.choice(GEMINI_MODELS)
+        logger.info(f'Request to Gemini API successful with model: {model}')
+        base_url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
+        response = await client.post(base_url, headers=headers, json=data, params=params)
+        response.raise_for_status()
+        return response.json()
 
 
 @dataclass
