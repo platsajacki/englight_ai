@@ -11,8 +11,7 @@ DATABASE_URL = getenv('DATABASE_URL', 'sqlite+aiosqlite:///./database.db')
 if not DATABASE_URL:
     raise ValueError('DATABASE_URL environment variable is not set.')
 
-GEMINI_MODEL = getenv('GEMINI_MODEL', 'gemini-2.0-flash-lite')
-GEMINI_BASE_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent'
+GEMINI_MODELS = ['gemini-2.0-flash-lite', 'gemini-2.0-flash']
 
 NotProccesed = Literal['Не обработано']
 NOT_PROCESSED: NotProccesed = 'Не обработано'
