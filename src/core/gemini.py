@@ -1,9 +1,9 @@
 import json
-from dataclasses import dataclass
-from http import HTTPStatus
-from logging import getLogger
 import random
-from httpx import AsyncClient, HTTPStatusError, RequestError
+from dataclasses import dataclass
+from logging import getLogger
+
+from httpx import AsyncClient, RequestError
 
 from constants import (
     DEFAULT_TRANSLATE_PROMPT,
