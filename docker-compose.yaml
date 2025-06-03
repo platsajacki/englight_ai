@@ -9,5 +9,5 @@ services:
     env_file:
       - .env
     volumes:
-      - db_data:/home/app/db_data
+      - db_data:/app/db_data
     command: ["python3.13", "main.py"]
