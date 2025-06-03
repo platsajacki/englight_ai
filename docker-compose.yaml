@@ -1,7 +1,6 @@
 volumes:
   db_data:
 
-
 services:
   app:
     build:
@@ -10,5 +9,5 @@ services:
     env_file:
       - .env
     volumes:
-      - db_data:/home/app/words.db
+      - db_data:/home/app/db_data
     command: ["python3.13", "main.py"]
