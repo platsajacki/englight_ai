@@ -118,8 +118,8 @@ class GeminiEnglight:
             template = await self.get_prompt()
             prompt = template.format(message=self.message)
             response = await request_gemini(prompt)
+            logger.info('Received response from Gemini API: %s', response)
             answers = await self.process_answer(response)
-            logger.info('Received response from Gemini API: %s', answers)
             return answers
         except RequestError as e:
             logger.error('Request to Gemini API failed:\n%s', e)
