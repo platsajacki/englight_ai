@@ -11,7 +11,7 @@ DATABASE_URL = getenv('DATABASE_URL', 'sqlite+aiosqlite:///./database.db')
 if not DATABASE_URL:
     raise ValueError('DATABASE_URL environment variable is not set.')
 
-GEMINI_MODELS = ['gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash']
+GEMINI_MODELS = ['gemini-2.0-flash-lite', 'gemini-2.0-flash']
 
 NotProccesed = Literal['Не обработано']
 NOT_PROCESSED: NotProccesed = 'Не обработано'

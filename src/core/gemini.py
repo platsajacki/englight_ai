@@ -105,10 +105,10 @@ class GeminiEnglight:
     async def process_answer(self, answer: dict) -> dict | list:
         cleared_answer = self.extract_words(answer)
         if cleared_answer == NOT_PROCESSED:
-            return []
+            return ['Gemini API returned "not processed" response. Try again.']
         words = self.parse_json(cleared_answer)
         if not isinstance(words, dict):
-            return []
+            return ['Gemini API returned an invalid response format. Try again.']
         words_list = words.get('words', [])
         return await self.create_messages(words_list) if words_list else []
 
@@ -123,7 +123,7 @@ class GeminiEnglight:
             return answers
         except RequestError as e:
             logger.error('Request to Gemini API failed:\n%s', e)
-            return []
+            return ['Oops, something went wrong with Gemini API request. Try again.']
         except Exception as e:
             logger.error('An unexpected error occurred:\n%s', e, exc_info=True)
-            return []
+            return ['Oops, something went wrong. Try again.']
