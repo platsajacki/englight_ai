@@ -112,7 +112,7 @@ class GeminiEnglight:
         words_list = words.get('words', [])
         return await self.create_messages(words_list) if words_list else []
 
-    async def __call__(self) -> dict | list[NotProccesed]:
+    async def __call__(self) -> dict | list[NotProccesed | str]:
         try:
             logger.info('Requesting Gemini API with message: %s', self.message)
             template = await self.get_prompt()

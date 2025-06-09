@@ -25,6 +25,7 @@ exclude = [
     'static',
     'migrations',
     '__pycache__',
+    'src/alembic',
     'venv',
 ]
 

@@ -1,7 +1,24 @@
+from datetime import timedelta
 from os import getenv
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from httpx import Proxy
+
+UTC = ZoneInfo('UTC')
+# 📚 Система интервальных повторений на основе принципов метода Leitner + SM2 (Anki)
+# После 7 успешных повторений слово считается выученным и больше не показывается.
+REPETITION_INTERVALS = {
+    0: timedelta(days=1),
+    1: timedelta(days=2),
+    2: timedelta(days=3),
+    3: timedelta(days=7),
+    4: timedelta(days=14),
+    5: timedelta(days=30),
+    6: timedelta(days=60),
+    7: timedelta(days=120),
+}
+
 
 GEMINI_KEY = getenv('GEMINI_KEY')
 if not GEMINI_KEY:
