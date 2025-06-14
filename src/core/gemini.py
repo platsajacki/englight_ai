@@ -32,6 +32,7 @@ async def request_gemini(prompt: str) -> dict | NotProccesed:
         logger.info(f'Request to Gemini API successful with model: {model}')
         base_url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
         response = await client.post(base_url, headers=headers, json=data, params=params)
+        logger.info('Response status code: %s\nText: %s', response.status_code, response.text)
         response.raise_for_status()
         return response.json()
 
