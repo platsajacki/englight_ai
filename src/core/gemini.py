@@ -122,8 +122,8 @@ class GeminiEnglight:
             answers = await self.process_answer(response)
             return answers
         except RequestError as e:
-            logger.error('Request to Gemini API failed:\n%s', e)
+            logger.error('Request to Gemini API failed:\n%s', str(e))
             return ['Oops, something went wrong with Gemini API request. Try again.']
         except Exception as e:
-            logger.error('An unexpected error occurred:\n%s', e, exc_info=True)
+            logger.error('An unexpected error occurred:\n%s', str(e), exc_info=True)
             return ['Oops, something went wrong. Try again.']
