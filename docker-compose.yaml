@@ -11,3 +11,4 @@ services:
     volumes:
       - db_data:/app/db_data
     command: ["python3.13", "main.py"]
+    restart: always
