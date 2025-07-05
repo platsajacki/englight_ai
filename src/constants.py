@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import time, timedelta
 from os import getenv
 from typing import Literal
 from zoneinfo import ZoneInfo
@@ -19,6 +19,7 @@ REPETITION_INTERVALS = {
     7: timedelta(days=120),
 }
 
+SCHEDULED_TIMES = [time(15, 30), time(20, 30)]
 
 GEMINI_KEY = getenv('GEMINI_KEY')
 if not GEMINI_KEY:

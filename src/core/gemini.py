@@ -18,6 +18,7 @@ from core.data_types import ExampleData, WordData
 from core.decorators import retry_request
 from database.database import db
 from database.managers import PromptManager, WordManager
+from utils import has_russian
 
 logger = getLogger(__name__)
 
@@ -72,6 +73,9 @@ class GeminiEnglight:
         try:
             if not isinstance(word_data, WordData) or not word_data.word:
                 logger.error('Invalid WordData object: %s', word_data)
+                return
+            if has_russian(word_data.word):
+                logger.error('Word contains Russian characters: %s', word_data.word)
                 return
             manager = WordManager(db)
             word = await manager.get_by_word(word_data.word)

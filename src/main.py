@@ -6,15 +6,17 @@ from logging import basicConfig
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
 from dotenv import load_dotenv
 
 from constants import ALLOWED_CHATS_FOR_SAVING_TO_DB, JSON_FORMAT, PromptName
 from core.gemini import GeminiEnglight
+from core.scheduler import setup_scheduler
 from database.database import db
-from database.managers import PromptManager
+from database.managers import PromptManager, WordManager, WordProgressManager
 from telegram.bot import bot, dp, router
+from telegram.buttons import make_sure_buttons
 from telegram.filters import access_filter
 from telegram.states import PromptStates
 
@@ -65,8 +67,38 @@ async def handle_all_messages(message: Message) -> None:
         await message.answer(str(answer), parse_mode=ParseMode.HTML)
 
 
+@router.callback_query(lambda c: c.data.startswith('know_') or c.data.startswith('not_know_'))
+async def handle_know_not_know(callback_query: CallbackQuery):
+    if callback_query.data is None or callback_query.message is None:
+        return
+    word_id = int(callback_query.data.split('_')[1])
+    word_manager = WordManager(db)
+    word = await word_manager.get_with_examples(word_id)
+    if not word:
+        await callback_query.message.answer('Word not found.')
+        return
+    await callback_query.message.answer(
+        word.to_message(), parse_mode=ParseMode.HTML, reply_markup=make_sure_buttons(word_id)
+    )
+
+
+@router.callback_query(lambda c: c.data.startswith('sure_'))
+async def handle_sure(callback_query: CallbackQuery) -> None:
+    if callback_query.message is None or callback_query.data is None:
+        return
+    _, answer, word_id_str = callback_query.data.split('_')
+    word_id = int(word_id_str)
+    word_progress_manager = WordProgressManager(db)
+    word_progress = word_progress_manager.record_review(word_id, answer == 'yes')
+    if not word_progress:
+        await callback_query.message.answer('Word progress not found.')
+        return
+    await callback_query.message.answer('I updated the word progress. Thanks for your answer!')
+
+
 async def main() -> None:
     await db.init_models()
+    setup_scheduler()
     await dp.start_polling(bot)
 
 

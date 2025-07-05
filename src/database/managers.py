@@ -1,10 +1,13 @@
-from typing import Generic, TypeVar
+from datetime import datetime
+from typing import Generic, Sequence, TypeVar
 
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 
+from constants import UTC
 from core.data_types import WordData
 from database.database import Database
-from database.models import Example, Prompt, Word
+from database.models import Example, Prompt, Word, WordProgress
 
 T = TypeVar('T')
 
@@ -37,12 +40,12 @@ class WordManager(Manager[Word]):
 
     async def get_by_word(self, word: str) -> Word | None:
         async with self.db.async_session() as session:
-            result = await session.execute(select(Word).where(Word.word == word))
+            result = await session.execute(select(self.model).where(func.lower(self.model.word) == word.lower()))
             return result.scalar_one_or_none()
 
     async def create_from_data(self, data: WordData) -> Word:
         async with self.db.async_session() as session:
-            word = Word(
+            word = self.model(
                 word=data.word,
                 transcription=data.transcription,
                 translation=data.translation,
@@ -63,6 +66,13 @@ class WordManager(Manager[Word]):
             await session.refresh(word)
             return word
 
+    async def get_with_examples(self, word_id: int) -> Word | None:
+        async with self.db.async_session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.id == word_id).options(selectinload(self.model.examples))
+            )
+            return result.scalar_one_or_none()
+
 
 class PromptManager(Manager[Prompt]):
     def __init__(self, db: Database) -> None:
@@ -70,24 +80,48 @@ class PromptManager(Manager[Prompt]):
 
     async def get_by_name(self, name: str) -> Prompt | None:
         async with self.db.async_session() as session:
-            result = await session.execute(select(Prompt).where(Prompt.name == name))
+            result = await session.execute(select(self.model).where(self.model.name == name))
             return result.scalar_one_or_none()
 
     async def get_or_create_by_name(self, name: str, prompt_text: str) -> Prompt:
         async with self.db.async_session() as session:
-            result = await session.execute(select(Prompt).where(Prompt.name == name))
+            result = await session.execute(select(self.model).where(self.model.name == name))
             existing = result.scalar_one_or_none()
             if existing:
                 return existing
-            new_prompt = Prompt(name=name, text=prompt_text)
+            new_prompt = self.model(name=name, text=prompt_text)
             session.add(new_prompt)
             await session.commit()
             return new_prompt
 
     async def update_text_by_name(self, name: str, new_text: str) -> None:
         async with self.db.async_session() as session:
-            result = await session.execute(select(Prompt).where(Prompt.name == name))
+            result = await session.execute(select(self.model).where(self.model.name == name))
             prompt = result.scalar_one_or_none()
             if prompt:
                 prompt.text = new_text
                 await session.commit()
+
+
+class WordProgressManager(Manager[WordProgress]):
+    def __init__(self, db: Database) -> None:
+        super().__init__(db, WordProgress)
+
+    async def get_next_review_words(self, limit: int = 10) -> Sequence[WordProgress]:
+        now = datetime.now(tz=UTC)
+        async with self.db.async_session() as session:
+            results = await session.execute(
+                select(self.model)
+                .where(self.model.next_review_at <= now)
+                .order_by(self.model.next_review_at)
+                .limit(limit)
+            )
+        return results.scalars().all()
+
+    async def record_review(self, word_id: int, success: bool) -> WordProgress | None:
+        async with self.db.async_session() as session:
+            wp = await self.get(word_id)
+            if wp:
+                wp.record_review(success)
+                await session.commit()
+            return wp
