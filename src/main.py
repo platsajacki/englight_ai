@@ -36,25 +36,13 @@ async def update_translate_prompt_handler(message: Message, state: FSMContext) -
     await state.set_state(PromptStates.waiting_for_translate_prompt)
 
 
-@router.message(Command('add'), access_filter)
-async def update_translate_prompt_handler(message: Message) -> None:
-    from database.models import WordProgress
-    from datetime import datetime
-    from constants import UTC
-    m = WordManager(db)
-    msgs = await m.get_all_with_examples()
-    async with db.async_session() as session:
-        for msg in msgs:
-            if not msg.word:
-                continue
-            msg_p = WordProgress(word_id=msg.id, next_review_at=datetime.now(tz=UTC))
-            session.add(msg_p)
-            await message.answer(
-                msg.to_message(),
-                parse_mode=ParseMode.HTML,
-            )
-        await session.commit()
-    await message.answer('Words added successfully. Now you can review them.')
+@router.message(Command('count_words'), access_filter)
+async def count_words_handler(message: Message) -> None:
+    if not message.from_user:
+        return
+    words = WordManager(db).all()
+    response = f'Total words in the database: {len(words)}'
+    await message.answer(response)
 
 
 @router.message(PromptStates.waiting_for_translate_prompt, access_filter)

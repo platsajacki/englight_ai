@@ -19,7 +19,7 @@ REPETITION_INTERVALS = {
     7: timedelta(days=120),
 }
 
-SCHEDULED_TIMES = [time(9, 50), time(9, 55)]
+SCHEDULED_TIMES = [time(10, 00), time(10, 5)]
 # SCHEDULED_TIMES = [time(15, 30), time(20, 30)]
 
 GEMINI_KEY = getenv('GEMINI_KEY')

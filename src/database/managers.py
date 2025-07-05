@@ -127,6 +127,7 @@ class WordProgressManager(Manager[WordProgress]):
             results = await session.execute(
                 select(self.model)
                 .where(self.model.next_review_at <= now)
+                .options(selectinload(self.model.word).selectinload(Word.examples))
                 .order_by(self.model.next_review_at)
                 .limit(limit)
             )
