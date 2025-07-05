@@ -82,9 +82,7 @@ class WordManager(Manager[Word]):
 
     async def get_all_with_examples(self) -> Sequence[Word]:
         async with self.db.async_session() as session:
-            result = await session.execute(
-                select(self.model).options(selectinload(self.model.examples))
-            )
+            result = await session.execute(select(self.model).options(selectinload(self.model.examples)))
             return result.scalars().all()
 
 

@@ -40,7 +40,7 @@ async def update_translate_prompt_handler(message: Message, state: FSMContext) -
 async def count_words_handler(message: Message) -> None:
     if not message.from_user:
         return
-    words = WordManager(db).all()
+    words = await WordManager(db).all()
     response = f'Total words in the database: {len(words)}'
     await message.answer(response)
 
@@ -87,7 +87,9 @@ async def handle_know_not_know(callback_query: CallbackQuery):
         await callback_query.message.answer('Word not found.')
         return
     await callback_query.message.answer(
-        word.to_message(), parse_mode=ParseMode.HTML, reply_markup=make_sure_buttons(word_id),
+        word.to_message(),
+        parse_mode=ParseMode.HTML,
+        reply_markup=make_sure_buttons(word_id),
     )
 
 
