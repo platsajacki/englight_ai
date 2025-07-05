@@ -67,6 +67,7 @@ class WordManager(Manager[Word]):
                     )
                     word.examples.append(example)
             session.add(word)
+            session.flush()
             word_progress = WordProgress(word_id=word.id)
             session.add(word_progress)
             await session.commit()
