@@ -36,6 +36,27 @@ async def update_translate_prompt_handler(message: Message, state: FSMContext) -
     await state.set_state(PromptStates.waiting_for_translate_prompt)
 
 
+@router.message(Command('add'), access_filter)
+async def update_translate_prompt_handler(message: Message) -> None:
+    from database.models import WordProgress
+    from datetime import datetime
+    from constants import UTC
+    m = WordManager(db)
+    msgs = await m.all()
+    async with db.async_session() as session:
+        for msg in msgs:
+            if not msg.word:
+                continue
+            msg_p = WordProgress(word_id=msg.id, next_review_at=datetime.now(tz=UTC))
+            session.add(msg_p)
+            await message.answer(
+                msg.to_message(),
+                parse_mode=ParseMode.HTML,
+            )
+        await session.commit()
+    await message.answer('Words added successfully. Now you can review them.')
+
+
 @router.message(PromptStates.waiting_for_translate_prompt, access_filter)
 async def waiting_for_translate_prompt_handler(message: Message, state: FSMContext) -> None:
     if not message.from_user:
@@ -67,7 +88,7 @@ async def handle_all_messages(message: Message) -> None:
         await message.answer(str(answer), parse_mode=ParseMode.HTML)
 
 
-@router.callback_query(lambda c: c.data.startswith('know_') or c.data.startswith('not_know_'))
+@router.callback_query(lambda c: c.data.startswith('know_') or c.data.startswith('not_know_'), access_filter)
 async def handle_know_not_know(callback_query: CallbackQuery):
     if callback_query.data is None or callback_query.message is None:
         return
@@ -78,11 +99,11 @@ async def handle_know_not_know(callback_query: CallbackQuery):
         await callback_query.message.answer('Word not found.')
         return
     await callback_query.message.answer(
-        word.to_message(), parse_mode=ParseMode.HTML, reply_markup=make_sure_buttons(word_id)
+        word.to_message(), parse_mode=ParseMode.HTML, reply_markup=make_sure_buttons(word_id),
     )
 
 
-@router.callback_query(lambda c: c.data.startswith('sure_'))
+@router.callback_query(lambda c: c.data.startswith('sure_'), access_filter)
 async def handle_sure(callback_query: CallbackQuery) -> None:
     if callback_query.message is None or callback_query.data is None:
         return

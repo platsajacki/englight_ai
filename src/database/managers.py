@@ -33,6 +33,11 @@ class Manager(Generic[T]):
                 await session.delete(obj)
                 await session.commit()
 
+    async def all(self) -> Sequence[T]:
+        async with self.db.async_session() as session:
+            result = await session.execute(select(self.model))
+            return result.scalars().all()
+
 
 class WordManager(Manager[Word]):
     def __init__(self, db: Database) -> None:
@@ -62,6 +67,8 @@ class WordManager(Manager[Word]):
                     )
                     word.examples.append(example)
             session.add(word)
+            word_progress = WordProgress(word_id=word.id)
+            session.add(word_progress)
             await session.commit()
             await session.refresh(word)
             return word
