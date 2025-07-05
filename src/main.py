@@ -100,7 +100,7 @@ async def handle_sure(callback_query: CallbackQuery) -> None:
     _, answer, word_id_str = callback_query.data.split('_')
     word_id = int(word_id_str)
     word_progress_manager = WordProgressManager(db)
-    word_progress = word_progress_manager.record_review(word_id, answer == 'yes')
+    word_progress = await word_progress_manager.record_review(word_id, answer == 'yes')
     if not word_progress:
         await callback_query.message.edit_text(  # type: ignore[union-attr]
             'Word progress not found.',
@@ -108,7 +108,7 @@ async def handle_sure(callback_query: CallbackQuery) -> None:
         )
         return
     await callback_query.message.edit_text(  # type: ignore[union-attr]
-        f'I updated <b>{word_progress.word.word}</b> progress. Thanks for your answer!',
+        f'I updated <b>{word_progress.word.word or 'WAS EMPTY'}</b> progress. Thanks for your answer!',
         reply_markup=None,
         parse_mode=ParseMode.HTML,
     )
