@@ -86,8 +86,9 @@ async def handle_know_not_know(callback_query: CallbackQuery):
     if not word:
         await callback_query.message.edit_text('Word not found.')  # type: ignore[union-attr]
         return
+    msg = f'{word.to_message()}\n\n <i>Do you really know this word?</i>'
     await callback_query.message.edit_text(  # type: ignore[union-attr]
-        word.to_message(),
+        msg,
         parse_mode=ParseMode.HTML,
         reply_markup=make_sure_buttons(word_id),
     )
