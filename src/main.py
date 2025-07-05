@@ -42,7 +42,7 @@ async def update_translate_prompt_handler(message: Message) -> None:
     from datetime import datetime
     from constants import UTC
     m = WordManager(db)
-    msgs = await m.all()
+    msgs = await m.get_all_with_examples()
     async with db.async_session() as session:
         for msg in msgs:
             if not msg.word:
