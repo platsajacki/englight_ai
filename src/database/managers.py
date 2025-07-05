@@ -131,9 +131,16 @@ class WordProgressManager(Manager[WordProgress]):
             )
         return results.scalars().all()
 
-    async def record_review(self, word_id: int, success: bool) -> WordProgress | None:
+    async def get_with_word(self, progress_id: int) -> WordProgress | None:
         async with self.db.async_session() as session:
-            wp = await self.get(word_id)
+            result = await session.execute(
+                select(self.model).where(self.model.id == progress_id).options(selectinload(self.model.word))
+            )
+            return result.scalar_one_or_none()
+
+    async def record_review(self, progress_id: int, success: bool) -> WordProgress | None:
+        async with self.db.async_session() as session:
+            wp = await self.get_with_word(progress_id)
             if wp:
                 wp.record_review(success)
                 await session.commit()

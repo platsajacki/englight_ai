@@ -1,10 +1,10 @@
 from typing import cast
 
 from aiogram.filters import BaseFilter
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
 from constants import ALLOWED_CHATS
-from aiogram.types import CallbackQuery
+
 
 class AccessFilter(BaseFilter):
     def __init__(self, allowed_chats: set[str]) -> None:
@@ -19,16 +19,12 @@ class AccessFilter(BaseFilter):
             user_id = event.from_user.id if event.from_user else None
         else:
             return False
-        allowed = (
-            str(chat_id) in self.allowed_chats
-            or (user_id is not None and str(user_id) in self.allowed_chats)
-        )
+        allowed = str(chat_id) in self.allowed_chats or (user_id is not None and str(user_id) in self.allowed_chats)
         if not allowed:
             if isinstance(event, Message):
                 await event.answer('Access denied.', show_alert=True)
             elif isinstance(event, CallbackQuery):
                 await event.answer('Access denied.', show_alert=True)
-
         return cast(bool, allowed)
 
 

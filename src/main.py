@@ -84,9 +84,9 @@ async def handle_know_not_know(callback_query: CallbackQuery):
     word_manager = WordManager(db)
     word = await word_manager.get_with_examples(word_id)
     if not word:
-        await callback_query.message.edit_text('Word not found.')
+        await callback_query.message.edit_text('Word not found.')  # type: ignore[union-attr]
         return
-    await callback_query.message.edit_text(
+    await callback_query.message.edit_text(  # type: ignore[union-attr]
         word.to_message(),
         parse_mode=ParseMode.HTML,
         reply_markup=make_sure_buttons(word_id),
@@ -102,9 +102,16 @@ async def handle_sure(callback_query: CallbackQuery) -> None:
     word_progress_manager = WordProgressManager(db)
     word_progress = word_progress_manager.record_review(word_id, answer == 'yes')
     if not word_progress:
-        await callback_query.message.edit_text('Word progress not found.', reply_markup=None)
+        await callback_query.message.edit_text(  # type: ignore[union-attr]
+            'Word progress not found.',
+            reply_markup=None,
+        )
         return
-    await callback_query.message.edit_text('I updated the word progress. Thanks for your answer!', reply_markup=None)
+    await callback_query.message.edit_text(  # type: ignore[union-attr]
+        f'I updated <b>{word_progress.word.word}</b> progress. Thanks for your answer!',
+        reply_markup=None,
+        parse_mode=ParseMode.HTML,
+    )
 
 
 async def main() -> None:
