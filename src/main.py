@@ -108,7 +108,7 @@ async def handle_sure(callback_query: CallbackQuery) -> None:
         )
         return
     await callback_query.message.edit_text(  # type: ignore[union-attr]
-        f'I updated <b>{word_progress.word.word or 'WAS EMPTY'}</b> progress. Thanks for your answer!',
+        f'I updated word "<b>{word_progress.word.word or 'WAS EMPTY'}"</b> progress. Thanks for your answer!',
         reply_markup=None,
         parse_mode=ParseMode.HTML,
     )
