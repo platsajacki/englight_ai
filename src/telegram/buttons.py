@@ -19,7 +19,9 @@ def make_sure_buttons(word_id: int, is_know: bool) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text='Yes', callback_data=f'sure_yes_{word_id}'),
                 InlineKeyboardButton(text='No', callback_data=f'sure_no_{word_id}'),
             ]
-        ] if is_know else [
+        ]
+        if is_know
+        else [
             [
                 InlineKeyboardButton(text='Got it', callback_data=f'sure_gotit_{word_id}'),
             ]
