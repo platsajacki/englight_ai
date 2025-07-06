@@ -23,6 +23,4 @@ def make_sure_buttons(word_id: int, is_know: bool) -> InlineKeyboardMarkup:
 				InlineKeyboardButton(text='I remembered that', callback_data=f'sure_remember_{word_id}'),
 			]
 		]
-    return InlineKeyboardMarkup(
-        
-    )
+    return InlineKeyboardMarkup(inline_keyboard)
