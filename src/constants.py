@@ -21,7 +21,7 @@ REPETITION_INTERVALS = {
 }
 
 # SCHEDULED_TIMES = [time(7, 30), time(12, 30)]
-SCHEDULED_TIMES = [time(7, 30), time(14, 9), time(14, 10)]
+SCHEDULED_TIMES = [time(7, 30), time(14, 15)]
 
 GEMINI_KEY = getenv('GEMINI_KEY')
 if not GEMINI_KEY:

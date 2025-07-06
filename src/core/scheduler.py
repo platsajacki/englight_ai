@@ -27,13 +27,13 @@ async def send_word_reviews():
         for word_progress in word_progresses:
             if not word_progress.word.word:
                 continue
-            await bot.send_message(
-                chat_id=ADMIN_ID,
-                text=word_progress.word.word,
-                reply_markup=make_know_or_not_buttons(word_progress.word.id),
-            )
             audio = await text_to_speech(word_progress.word.word)
             await bot.send_voice(
                 chat_id=ADMIN_ID,
                 voice=BufferedInputFile(audio, filename=f'{word_progress.word.word}.mp3'),
+            )
+            await bot.send_message(
+                chat_id=ADMIN_ID,
+                text=word_progress.word.word,
+                reply_markup=make_know_or_not_buttons(word_progress.word.id),
             )
