@@ -80,17 +80,19 @@ async def handle_all_messages(message: Message) -> None:
 async def handle_know_not_know(callback_query: CallbackQuery):
     if callback_query.data is None or callback_query.message is None:
         return
-    word_id = int(callback_query.data.split('_')[-1])
+    data = callback_query.data.split('_')
+    word_id = int(data[-1])
     word_manager = WordManager(db)
     word = await word_manager.get_with_examples(word_id)
     if not word:
         await callback_query.message.edit_text('Word not found.')  # type: ignore[union-attr]
         return
-    msg = f'{word.to_message()}\n\n <i>Do you really know this word?</i>'
+    is_know = data[0] == 'know'
+    msg = f'{word.to_message()}\n\n <i>Do you really know this word?</i>' if is_know else word.to_message()
     await callback_query.message.edit_text(  # type: ignore[union-attr]
         msg,
         parse_mode=ParseMode.HTML,
-        reply_markup=make_sure_buttons(word_id),
+        reply_markup=make_sure_buttons(word_id, is_know=is_know),
     )
 
 
