@@ -13,14 +13,16 @@ def make_know_or_not_buttons(word_id: int) -> InlineKeyboardMarkup:
 
 
 def make_sure_buttons(word_id: int, is_know: bool) -> InlineKeyboardMarkup:
-    inline_keyboard = [
+    inline_keyboard = (
+        [
             [
                 InlineKeyboardButton(text='Yes', callback_data=f'sure_yes_{word_id}'),
                 InlineKeyboardButton(text='No', callback_data=f'sure_no_{word_id}'),
             ]
         ] if is_know else [
-			[
-				InlineKeyboardButton(text='I remembered that', callback_data=f'sure_remember_{word_id}'),
-			]
-		]
-    return InlineKeyboardMarkup(inline_keyboard)
+            [
+                InlineKeyboardButton(text='I remembered that', callback_data=f'sure_remember_{word_id}'),
+            ]
+        ]
+    )
+    return InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
