@@ -40,9 +40,10 @@ async def update_translate_prompt_handler(message: Message, state: FSMContext) -
 async def count_words_handler(message: Message) -> None:
     if not message.from_user:
         return
-    words = await WordManager(db).all()
-    response = f'Total words in the database: {len(words)}'
-    await message.answer(response)
+    async with db.async_session() as session:
+        words = await WordManager(session).all()
+        response = f'Total words in the database: {len(words)}'
+        await message.answer(response)
 
 
 @router.message(PromptStates.waiting_for_translate_prompt, access_filter)
@@ -59,10 +60,11 @@ async def waiting_for_translate_prompt_handler(message: Message, state: FSMConte
     if JSON_FORMAT not in new_text:
         await message.answer(f'Prompt text must contain:\n{JSON_FORMAT}')
         return
-    prompt_manager = PromptManager(db)
-    await prompt_manager.update_text_by_name(PromptName.TRANSLATE, new_text)
-    await message.answer('Translate prompt updated successfully.')
-    await state.clear()
+    async with db.async_session() as session:
+        prompt_manager = PromptManager(session)
+        await prompt_manager.update_text_by_name(PromptName.TRANSLATE, new_text)
+        await message.answer('Translate prompt updated successfully.')
+        await state.clear()
 
 
 @router.message(StateFilter(None), access_filter)
@@ -82,18 +84,19 @@ async def handle_know_not_know(callback_query: CallbackQuery):
         return
     data = callback_query.data.split('_')
     word_id = int(data[-1])
-    word_manager = WordManager(db)
-    word = await word_manager.get_with_examples(word_id)
-    if not word:
-        await callback_query.message.edit_text('Word not found.')  # type: ignore[union-attr]
-        return
-    is_know = data[0] == 'know'
-    msg = f'{word.to_message()}\n\n <i>Do you really know this word?</i>' if is_know else word.to_message()
-    await callback_query.message.edit_text(  # type: ignore[union-attr]
-        msg,
-        parse_mode=ParseMode.HTML,
-        reply_markup=make_sure_buttons(word_id, is_know=is_know),
-    )
+    async with db.async_session() as session:
+        word_manager = WordManager(session)
+        word = await word_manager.get_with_examples(word_id)
+        if not word:
+            await callback_query.message.edit_text('Word not found.')  # type: ignore[union-attr]
+            return
+        is_know = data[0] == 'know'
+        msg = f'{word.to_message()}\n\n <i>Do you really know this word?</i>' if is_know else word.to_message()
+        await callback_query.message.edit_text(  # type: ignore[union-attr]
+            msg,
+            parse_mode=ParseMode.HTML,
+            reply_markup=make_sure_buttons(word_id, is_know=is_know),
+        )
 
 
 @router.callback_query(lambda c: c.data.startswith('sure_'), access_filter)
@@ -102,19 +105,20 @@ async def handle_sure(callback_query: CallbackQuery) -> None:
         return
     _, answer, word_id_str = callback_query.data.split('_')
     word_id = int(word_id_str)
-    word_progress_manager = WordProgressManager(db)
-    word_progress = await word_progress_manager.record_review(word_id, answer == 'yes')
-    if not word_progress:
+    async with db.async_session() as session:
+        word_progress_manager = WordProgressManager(session)
+        word_progress = await word_progress_manager.record_review(word_id, answer == 'yes')
+        if not word_progress:
+            await callback_query.message.edit_text(  # type: ignore[union-attr]
+                'Word progress not found.',
+                reply_markup=None,
+            )
+            return
         await callback_query.message.edit_text(  # type: ignore[union-attr]
-            'Word progress not found.',
+            f'I updated word "<b>{word_progress.word.word or 'WAS EMPTY'}"</b> progress. Thanks for your answer!',
             reply_markup=None,
+            parse_mode=ParseMode.HTML,
         )
-        return
-    await callback_query.message.edit_text(  # type: ignore[union-attr]
-        f'I updated word "<b>{word_progress.word.word or 'WAS EMPTY'}"</b> progress. Thanks for your answer!',
-        reply_markup=None,
-        parse_mode=ParseMode.HTML,
-    )
 
 
 async def main() -> None:

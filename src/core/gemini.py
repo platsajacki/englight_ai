@@ -44,12 +44,13 @@ class GeminiEnglight:
     save_to_db: bool = True
 
     async def get_prompt(self) -> str:
-        prompt_manager = PromptManager(db)
-        prompt = await prompt_manager.get_or_create_by_name(PromptName.TRANSLATE, DEFAULT_TRANSLATE_PROMPT)
-        if not prompt.text:
-            logger.error('Prompt text is empty for prompt name: %s', PromptName.TRANSLATE)
-            return DEFAULT_TRANSLATE_PROMPT
-        return prompt.text
+        async with db.async_session() as session:
+            prompt_manager = PromptManager(session)
+            prompt = await prompt_manager.get_or_create_by_name(PromptName.TRANSLATE, DEFAULT_TRANSLATE_PROMPT)
+            if not prompt.text:
+                logger.error('Prompt text is empty for prompt name: %s', PromptName.TRANSLATE)
+                return DEFAULT_TRANSLATE_PROMPT
+            return prompt.text
 
     def extract_words(self, answer: dict) -> str | NotProccesed:
         cleared_answer = (
@@ -77,12 +78,13 @@ class GeminiEnglight:
             if has_russian(word_data.word):
                 logger.error('Word contains Russian characters: %s', word_data.word)
                 return
-            manager = WordManager(db)
-            word = await manager.get_by_word(word_data.word)
-            if word:
-                logger.info('Word object already exists for word: %s', word_data.word)
-                return
-            await manager.create_from_data(word_data)
+            async with db.async_session() as session:
+                manager = WordManager(session)
+                word = await manager.get_by_word(word_data.word)
+                if word:
+                    logger.info('Word object already exists for word: %s', word_data.word)
+                    return
+                await manager.create_from_data(word_data)
         except Exception as e:
             logger.error('Error creating word object from WordData: %s\nError: %s', word_data, e)
 
