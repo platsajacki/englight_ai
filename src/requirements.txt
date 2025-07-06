@@ -1,4 +1,5 @@
 aiogram==3.20.0.post0
+aiolimiter==1.2.1
 aiosqlite==0.21.0
 alembic==1.16.1
 apscheduler==3.11.0
