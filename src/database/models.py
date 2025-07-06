@@ -98,21 +98,19 @@ class WordProgress(Base):
             return self.next_review_at
         return self.count_next_review()
 
-    def count_next_review(self) -> datetime:
+    def count_next_review(self, from_time: Optional[datetime] = None) -> datetime:
         interval = REPETITION_INTERVALS[self.repetitions]
-        if self.review_history:
-            last_iso = self.review_history[-1]
-            last = datetime.fromisoformat(last_iso)
-        else:
-            last = datetime.now(tz=UTC)
-        return last + interval
+        if from_time is None:
+            from_time = datetime.now(tz=UTC)
+        return from_time + interval
 
     def record_review(self, success: bool) -> None:
-        now_iso = datetime.now(tz=UTC).isoformat()
+        now = datetime.now(tz=UTC)
+        now_iso = now.isoformat()
         if success:
             if len(self.review_history) < len(REPETITION_INTERVALS):
                 self.review_history.append(now_iso)
         else:
             self.review_history.clear()
             self.review_history.append(now_iso)
-        self.next_review_at = self.count_next_review()
+        self.next_review_at = self.count_next_review(from_time=now)
