@@ -80,7 +80,7 @@ async def handle_all_messages(message: Message) -> None:
 async def handle_know_not_know(callback_query: CallbackQuery):
     if callback_query.data is None or callback_query.message is None:
         return
-    word_id = int(callback_query.data.split('_')[1])
+    word_id = int(callback_query.data.split('_')[-1])
     word_manager = WordManager(db)
     word = await word_manager.get_with_examples(word_id)
     if not word:
