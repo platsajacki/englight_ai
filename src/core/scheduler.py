@@ -1,3 +1,5 @@
+from aiogram.types import BufferedInputFile
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from constants import ADMIN_ID, SCHEDULED_TIMES, UTC
@@ -5,6 +7,7 @@ from database.database import db
 from database.managers import WordProgressManager
 from telegram.bot import bot
 from telegram.buttons import make_know_or_not_buttons
+from utils import text_to_speech
 
 
 def setup_scheduler():
@@ -28,4 +31,9 @@ async def send_word_reviews():
                 chat_id=ADMIN_ID,
                 text=word_progress.word.word,
                 reply_markup=make_know_or_not_buttons(word_progress.word.id),
+            )
+            audio = await text_to_speech(word_progress.word.word)
+            await bot.send_voice(
+                chat_id=ADMIN_ID,
+                voice=BufferedInputFile(audio, filename=f'{word_progress.word.word}.mp3'),
             )
