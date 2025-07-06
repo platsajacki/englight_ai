@@ -3,6 +3,7 @@ aiolimiter==1.2.1
 aiosqlite==0.21.0
 alembic==1.16.1
 apscheduler==3.11.0
+gTTS==2.5.4
 httpx==0.28.1
 python-dotenv==1.1.0
 requests==2.32.3
