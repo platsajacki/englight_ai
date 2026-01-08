@@ -28,6 +28,3 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY src/ .
 COPY docker.alembic.ini ./alembic.ini
-
-RUN mkdir -p /home/app/db_data && \
-    find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
