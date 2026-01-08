@@ -1,11 +1,10 @@
 import asyncio
 from functools import wraps
-from logging import getLogger
 from typing import Any, Awaitable, Callable
 
 from httpx import RequestError
 
-logger = getLogger(__name__)
+from core.loggers import main_logger as logger
 
 
 def retry_request(

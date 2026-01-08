@@ -1,7 +1,6 @@
 import json
 import random
 from dataclasses import dataclass
-from logging import getLogger
 
 from httpx import AsyncClient, RequestError
 
@@ -16,11 +15,10 @@ from constants import (
 )
 from core.data_types import ExampleData, WordData
 from core.decorators import retry_request
+from core.loggers import main_logger as logger
 from database.database import db
 from database.managers import PromptManager, WordManager
 from utils import has_russian
-
-logger = getLogger(__name__)
 
 
 @retry_request()

@@ -1,7 +1,4 @@
 import asyncio
-import logging
-import sys
-from logging import basicConfig
 
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart, StateFilter
@@ -12,6 +9,7 @@ from dotenv import load_dotenv
 
 from constants import ALLOWED_CHATS_FOR_SAVING_TO_DB, JSON_FORMAT, PromptName
 from core.gemini import GeminiEnglight
+from core.loggers import setup_logging
 from core.scheduler import setup_scheduler
 from database.database import db
 from database.managers import PromptManager, WordManager, WordProgressManager
@@ -129,5 +127,5 @@ async def main() -> None:
 
 if __name__ == '__main__':
     load_dotenv()
-    basicConfig(level=logging.INFO, stream=sys.stdout)
+    setup_logging()
     asyncio.run(main())
