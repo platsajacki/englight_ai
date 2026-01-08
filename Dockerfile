@@ -6,7 +6,10 @@ WORKDIR /app
 RUN apk add --no-cache --virtual .build-deps \
     gcc \
     musl-dev \
-    libffi-dev
+    libffi-dev \
+    openssl-dev \
+    cargo \
+    rust
 
 COPY src/requirements.txt .
 
@@ -15,6 +18,10 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 FROM python:3.13.3-alpine
 
 WORKDIR /app
+
+RUN apk add --no-cache \
+    libffi \
+    openssl
 
 COPY --from=builder /root/.local /root/.local
 
