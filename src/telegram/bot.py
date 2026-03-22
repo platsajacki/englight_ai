@@ -5,6 +5,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.session.aiohttp import AiohttpSession
 from telegram.middlewares.retry_after import LimiterMiddleware
 from constants import PROXY_URL
+
 TOKEN = getenv('BOT_TOKEN')
 
 if not TOKEN:
