@@ -49,6 +49,7 @@ PROXY_USERNAME = getenv('PROXY_USERNAME', '')
 PROXY_PASSWORD = getenv('PROXY_PASSWORD', '')
 
 PROXY = None
+PROXY_URL = None
 if USE_PROXY:
     if not (PROXY_IP and PROXY_PORT):
         raise ValueError('PROXY_IP and PROXY_PORT must be set when USE_PROXY is enabled.')
@@ -56,6 +57,7 @@ if USE_PROXY:
         f'http://{PROXY_IP}:{PROXY_PORT}',
         auth=(PROXY_USERNAME, PROXY_PASSWORD),
     )
+    PROXY_URL = f'http://{PROXY_USERNAME}:{PROXY_PASSWORD}@{PROXY_IP}:{PROXY_PORT}'
 
 
 class PromptName:
