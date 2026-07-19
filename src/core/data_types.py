@@ -1,21 +1,19 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class ExampleData:
-    example: str | None
-    translation: str | None
+class ExampleData(BaseModel):
+    example: str | None = Field(description='Пример использования на английском языке')
+    translation: str | None = Field(description='Перевод примера на русский язык')
 
 
-@dataclass
-class WordData:
-    word: str | None
-    transcription: str | None
-    translation: str | None
-    part_of_speech: str | None
-    forms: str | None
-    explanation: str | None
-    examples: list[ExampleData] | None
+class WordData(BaseModel):
+    word: str | None = Field(description='Слово или фраза на английском языке')
+    transcription: str | None = Field(description='Транскрипция в IPA')
+    translation: str | None = Field(description='Перевод на русский язык')
+    part_of_speech: str | None = Field(description='Часть речи на английском языке, например noun')
+    forms: str | None = Field(description='Нумерованный список форм слова одной строкой')
+    explanation: str | None = Field(description='Объяснение на русском языке')
+    examples: list[ExampleData] = Field(description='Примеры использования слова или фразы')
 
     def create_message(self) -> str:
         message = (
@@ -31,3 +29,9 @@ class WordData:
                 message += f'- {example.example} (перевод: {example.translation})\n'
         message += f'Объяснение:\n{self.explanation or "Не указано"}\n'
         return message
+
+
+class TranslationResponse(BaseModel):
+    words: list[WordData] = Field(
+        description='Найденные английские слова и фразы; пустой список для нерелевантного сообщения'
+    )

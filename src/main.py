@@ -7,9 +7,9 @@ from aiogram.types import CallbackQuery, Message
 
 from dotenv import load_dotenv
 
-from constants import ALLOWED_CHATS_FOR_SAVING_TO_DB, JSON_FORMAT, PromptName
-from core.gemini import GeminiEnglight
+from constants import ALLOWED_CHATS_FOR_SAVING_TO_DB, PromptName
 from core.loggers import setup_logging
+from core.openai import OpenAIEnglight
 from core.scheduler import setup_scheduler
 from database.database import db
 from database.managers import PromptManager, WordManager, WordProgressManager
@@ -55,9 +55,6 @@ async def waiting_for_translate_prompt_handler(message: Message, state: FSMConte
     if '{message}' not in new_text:
         await message.answer('Prompt text must contain "{message}" placeholder.')
         return
-    if JSON_FORMAT not in new_text:
-        await message.answer(f'Prompt text must contain:\n{JSON_FORMAT}')
-        return
     async with db.async_session() as session:
         prompt_manager = PromptManager(session)
         await prompt_manager.update_text_by_name(PromptName.TRANSLATE, new_text)
@@ -71,7 +68,7 @@ async def handle_all_messages(message: Message) -> None:
     if not text:
         return
     save_to_db = str(message.chat.id) in ALLOWED_CHATS_FOR_SAVING_TO_DB
-    answers = await GeminiEnglight(text, save_to_db)()
+    answers = await OpenAIEnglight(text, save_to_db)()
     for answer in answers:
         await message.answer(str(answer), parse_mode=ParseMode.HTML)
 

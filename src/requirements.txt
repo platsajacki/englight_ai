@@ -6,6 +6,8 @@ alembic==1.16.1
 apscheduler==3.11.0
 gTTS==2.5.4
 httpx==0.28.1
+openai==2.46.0
+pydantic==2.11.10
 python-dotenv==1.1.0
 requests==2.32.3
 sqlalchemy==2.0.41
