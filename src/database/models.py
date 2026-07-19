@@ -32,7 +32,7 @@ class Word(Base):
     __tablename__ = 'words'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    word: Mapped[Optional[str]] = mapped_column(String(500), unique=True)
+    word: Mapped[Optional[str]] = mapped_column(String(500))
     transcription: Mapped[Optional[str]] = mapped_column(String(500))
     translation: Mapped[Optional[str]] = mapped_column(String(500))
     part_of_speech: Mapped[Optional[str]] = mapped_column(String(100))
@@ -40,6 +40,8 @@ class Word(Base):
     explanation: Mapped[Optional[str]] = mapped_column(Text)
 
     examples: Mapped[List['Example']] = relationship(back_populates='word', cascade='all, delete-orphan')
+
+    __table_args__ = (UniqueConstraint('word', 'part_of_speech', name='uq_words_word_part_of_speech'),)
 
     def to_word_data(self) -> WordData:
         return WordData(

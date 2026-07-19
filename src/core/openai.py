@@ -68,9 +68,13 @@ class OpenAIEnglight:
                 return
             async with db.async_session() as session:
                 manager = WordManager(session)
-                word = await manager.get_by_word(word_data.word)
+                word = await manager.get_by_word_and_part_of_speech(word_data.word, word_data.part_of_speech)
                 if word:
-                    logger.info('Word object already exists for word: %s', word_data.word)
+                    logger.info(
+                        'Word object already exists for word: %s, part of speech: %s',
+                        word_data.word,
+                        word_data.part_of_speech,
+                    )
                     return
                 await manager.create_from_data(word_data)
         except Exception as e:
