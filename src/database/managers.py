@@ -39,13 +39,13 @@ class WordManager(Manager[Word]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Word)
 
-    async def get_by_word_and_part_of_speech(self, word: str, part_of_speech: str | None) -> Optional[Word]:
-        query = select(self.model).where(func.lower(self.model.word) == word.lower())
-        if part_of_speech is None:
-            query = query.where(self.model.part_of_speech.is_(None))
-        else:
-            query = query.where(func.lower(self.model.part_of_speech) == part_of_speech.lower())
-        result = await self.session.execute(query)
+    async def get_by_word_and_part_of_speech(self, word: str, part_of_speech: str) -> Optional[Word]:
+        result = await self.session.execute(
+            select(self.model).where(
+                func.lower(self.model.word) == word.lower(),
+                func.lower(self.model.part_of_speech) == part_of_speech.lower(),
+            )
+        )
         return result.scalar_one_or_none()
 
     async def create_from_data(self, data: WordData) -> Word:

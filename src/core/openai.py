@@ -63,6 +63,9 @@ class OpenAIEnglight:
             if not word_data.word:
                 logger.error('Word is empty: %s', word_data)
                 return
+            if not word_data.part_of_speech:
+                logger.error('Part of speech is empty: %s', word_data)
+                return
             if has_russian(word_data.word):
                 logger.error('Word contains Russian characters: %s', word_data.word)
                 return
