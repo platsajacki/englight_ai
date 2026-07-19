@@ -3,13 +3,13 @@ import asyncio
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
 
 from dotenv import load_dotenv
 
 from constants import ALLOWED_CHATS_FOR_SAVING_TO_DB, PromptName
-from core.loggers import setup_logging
-from core.openai import OpenAIEnglight
+from core.loggers import main_logger as logger, setup_logging
+from core.openai import OpenAIAnswer, OpenAIEnglight
 from core.scheduler import setup_scheduler
 from database.database import db
 from database.managers import PromptManager, WordManager, WordProgressManager
@@ -17,6 +17,7 @@ from telegram.bot import bot, dp, router
 from telegram.buttons import make_sure_buttons
 from telegram.filters import access_filter
 from telegram.states import PromptStates
+from utils import text_to_speech
 
 
 @router.message(CommandStart(), access_filter)
@@ -70,7 +71,20 @@ async def handle_all_messages(message: Message) -> None:
     save_to_db = str(message.chat.id) in ALLOWED_CHATS_FOR_SAVING_TO_DB
     answers = await OpenAIEnglight(text, save_to_db)()
     for answer in answers:
-        await message.answer(str(answer), parse_mode=ParseMode.HTML)
+        await send_openai_answer(message, answer)
+
+
+async def send_openai_answer(message: Message, answer: OpenAIAnswer) -> None:
+    await message.answer(answer.text, parse_mode=ParseMode.HTML)
+    if not answer.audio_text:
+        return
+    try:
+        audio = await text_to_speech(answer.audio_text)
+        voice = BufferedInputFile(audio, filename='pronunciation.mp3')
+        await message.answer_voice(voice)
+    except Exception as e:
+        logger.error('Could not generate pronunciation for "%s": %s', answer.audio_text, e, exc_info=True)
+        await message.answer('Could not generate pronunciation audio. Try again later.')
 
 
 @router.callback_query(lambda c: c.data.startswith('know_') or c.data.startswith('not_know_'), access_filter)

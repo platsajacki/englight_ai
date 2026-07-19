@@ -19,6 +19,12 @@ from database.managers import PromptManager, WordManager
 from utils import has_russian
 
 
+@dataclass
+class OpenAIAnswer:
+    text: str
+    audio_text: str | None = None
+
+
 async def request_openai(prompt: str) -> TranslationResponse | None:
     async with AsyncClient(timeout=30.0, proxy=PROXY_URL) as http_client:
         async with AsyncOpenAI(api_key=OPENAI_API_KEY, http_client=http_client) as client:
@@ -70,23 +76,23 @@ class OpenAIEnglight:
         except Exception as e:
             logger.error('Error creating word object from WordData: %s\nError: %s', word_data, e)
 
-    async def create_messages(self, words: list[WordData]) -> list[str]:
+    async def create_messages(self, words: list[WordData]) -> list[OpenAIAnswer]:
         messages = []
         for word_data in words:
             if self.save_to_db:
                 logger.info('Creating WordData object for word: %s', word_data.word)
                 await self.create_word_object(word_data)
-            messages.append(word_data.create_message())
+            messages.append(OpenAIAnswer(text=word_data.create_message(), audio_text=word_data.word))
         return messages
 
-    async def process_answer(self, answer: TranslationResponse | None) -> list[str]:
+    async def process_answer(self, answer: TranslationResponse | None) -> list[OpenAIAnswer]:
         if answer is None:
-            return ['OpenAI API returned an invalid response format. Try again.']
+            return [OpenAIAnswer(text='OpenAI API returned an invalid response format. Try again.')]
         if not answer.words:
-            return ['OpenAI API returned "not processed" response. Try again.']
+            return [OpenAIAnswer(text='OpenAI API returned "not processed" response. Try again.')]
         return await self.create_messages(answer.words)
 
-    async def __call__(self) -> list[str]:
+    async def __call__(self) -> list[OpenAIAnswer]:
         try:
             logger.info('Requesting OpenAI API with message: %s', self.message)
             template = await self.get_prompt()
@@ -95,22 +101,22 @@ class OpenAIEnglight:
             return await self.process_answer(response)
         except AuthenticationError as e:
             logger.error('OpenAI API authentication failed: %s', e)
-            return ['OpenAI API key is invalid or does not have access to the selected model.']
+            return [OpenAIAnswer(text='OpenAI API key is invalid or does not have access to the selected model.')]
         except RateLimitError as e:
             logger.error('OpenAI API rate limit exceeded: %s', e)
-            return ['OpenAI API rate limit exceeded. Try again later.']
+            return [OpenAIAnswer(text='OpenAI API rate limit exceeded. Try again later.')]
         except APITimeoutError as e:
             logger.error('OpenAI API request timed out: %s', e)
-            return ['OpenAI API did not respond in time. Try again.']
+            return [OpenAIAnswer(text='OpenAI API did not respond in time. Try again.')]
         except APIConnectionError as e:
             logger.error('Could not connect to OpenAI API: %s', e)
-            return ['Could not connect to OpenAI API. Try again later.']
+            return [OpenAIAnswer(text='Could not connect to OpenAI API. Try again later.')]
         except APIStatusError as e:
             logger.error('OpenAI API returned status %s: %s', e.status_code, e)
-            return [f'OpenAI API returned an error with status {e.status_code}. Try again later.']
+            return [OpenAIAnswer(text=f'OpenAI API returned an error with status {e.status_code}. Try again later.')]
         except OpenAIError as e:
             logger.error('OpenAI SDK error: %s', e)
-            return ['OpenAI API request failed. Try again later.']
+            return [OpenAIAnswer(text='OpenAI API request failed. Try again later.')]
         except Exception as e:
             logger.error('Unexpected error while processing OpenAI response: %s', e, exc_info=True)
-            return ['Could not process the OpenAI response. Try again.']
+            return [OpenAIAnswer(text='Could not process the OpenAI response. Try again.')]
