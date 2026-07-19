@@ -22,7 +22,7 @@ SCHEDULED_TIMES = [time(7, 30), time(12, 30)]
 OPENAI_API_KEY = getenv('OPENAI_API_KEY')
 if not OPENAI_API_KEY:
     raise ValueError('OPENAI_API_KEY environment variable is not set.')
-OPENAI_MODEL = getenv('OPENAI_MODEL', 'gpt-5-mini')
+OPENAI_MODEL = getenv('OPENAI_MODEL', 'gpt-5-nano')
 
 DATABASE_URL = getenv('DATABASE_URL', 'sqlite+aiosqlite:///./database.db')
 if not DATABASE_URL:
