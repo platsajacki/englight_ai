@@ -26,7 +26,7 @@ class OpenAIAnswer:
 
 
 async def request_openai(prompt: str) -> TranslationResponse | None:
-    async with AsyncClient(timeout=30.0, proxy=PROXY_URL) as http_client:
+    async with AsyncClient(timeout=None, proxy=PROXY_URL) as http_client:
         async with AsyncOpenAI(api_key=OPENAI_API_KEY, http_client=http_client) as client:
             response = await client.responses.parse(
                 model=OPENAI_MODEL,
