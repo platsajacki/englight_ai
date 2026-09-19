@@ -13,7 +13,7 @@ from openai import (
 
 from constants import DEFAULT_TRANSLATE_PROMPT, OPENAI_API_KEY, OPENAI_MODEL, PROXY_URL, PromptName
 from core.data_types import TranslationResponse, WordData
-from core.loggers import main_logger as logger
+from core.loggers import app_logger as logger
 from database.database import db
 from database.managers import PromptManager, WordManager
 from utils import has_russian

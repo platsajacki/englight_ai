@@ -11,4 +11,3 @@ pydantic==2.11.10
 python-dotenv==1.1.0
 requests==2.32.3
 sqlalchemy==2.0.41
-python-logging-loki==0.3.1

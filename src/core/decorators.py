@@ -4,7 +4,7 @@ from typing import Any, Awaitable, Callable
 
 from httpx import RequestError
 
-from core.loggers import main_logger as logger
+from core.loggers import app_logger as logger
 
 
 def retry_request(

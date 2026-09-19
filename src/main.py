@@ -8,7 +8,7 @@ from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from dotenv import load_dotenv
 
 from constants import ALLOWED_CHATS_FOR_SAVING_TO_DB, PromptName
-from core.loggers import main_logger as logger, setup_logging
+from core.loggers import app_logger as logger, setup_logging
 from core.openai import OpenAIAnswer, OpenAIEnglight
 from core.scheduler import setup_scheduler
 from database.database import db
