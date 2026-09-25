@@ -12,22 +12,16 @@ def make_know_or_not_buttons(word_id: int) -> InlineKeyboardMarkup:
     )
 
 
-def make_sure_buttons(word_id: int, is_know: bool) -> InlineKeyboardMarkup:
-    inline_keyboard = (
-        [
-            [
-                InlineKeyboardButton(text='Yes', callback_data=f'sure_yes_{word_id}'),
-                InlineKeyboardButton(text='No', callback_data=f'sure_no_{word_id}'),
-            ]
-        ]
-        if is_know
-        else [
-            [
-                InlineKeyboardButton(text='Got it', callback_data=f'sure_gotit_{word_id}'),
-            ]
-        ]
+def make_got_it_button(word_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text='Got it', callback_data=f'sure_gotit_{word_id}')]]
     )
-    return InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
+
+
+def make_cancel_check_button(word_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text='Cancel', callback_data=f'cancel_check_{word_id}')]]
+    )
 
 
 def make_delete_buttons(words: list[tuple[int, str]]) -> InlineKeyboardMarkup:

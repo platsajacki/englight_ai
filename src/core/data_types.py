@@ -1,3 +1,5 @@
+import html
+
 from pydantic import BaseModel, Field
 
 
@@ -35,3 +37,18 @@ class TranslationResponse(BaseModel):
     words: list[WordData] = Field(
         description='Найденные английские слова и фразы; пустой список для нерелевантного сообщения'
     )
+
+
+class SentenceCheck(BaseModel):
+    is_correct: bool = Field(description='Слово использовано в нужном значении и предложение грамматически верно')
+    corrected_sentence: str = Field(description='Исправленное предложение на английском языке')
+    feedback: str = Field(description='Разбор ошибок на русском языке с английскими исправлениями и примерами')
+
+    def create_message(self, sentence: str) -> str:
+        verdict = '✅ Correct!' if self.is_correct else '❌ Not quite.'
+        return (
+            f'<b>{verdict}</b>\n'
+            f'You said: <i>{html.escape(sentence)}</i>\n'
+            f'Correct: <b>{html.escape(self.corrected_sentence)}</b>\n'
+            f'{html.escape(self.feedback)}'
+        )

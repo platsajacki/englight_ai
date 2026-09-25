@@ -3,7 +3,7 @@ from aiogram.types import BufferedInputFile
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from constants import ALLOWED_CHATS, SCHEDULED_TIMES, UTC
+from constants import ALLOWED_CHATS, SCHEDULED_TIMES, UTC, WORD_PER_TIME
 from core.loggers import app_logger as logger
 from database.database import db
 from database.managers import UserManager, WordProgressManager
@@ -31,7 +31,7 @@ class ReviewSender:
 
     async def send_to_user(self, user: User) -> None:
         async with db.async_session() as session:
-            word_progresses = await WordProgressManager(session).get_next_review_words(user.id)
+            word_progresses = await WordProgressManager(session).get_next_review_words(user.id, WORD_PER_TIME)
         for word_progress in word_progresses:
             if word_progress.word.word:
                 await self.send_word(user.telegram_id, word_progress.word)

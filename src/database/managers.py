@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from constants import UTC
 from core.data_types import WordData
+from core.loggers import app_logger as logger
 from database.models import Example, Prompt, User, Word, WordProgress
 
 T = TypeVar('T')
@@ -111,12 +112,17 @@ class PromptManager(Manager[Prompt]):
         await self.session.commit()
         return new_prompt
 
+    async def get_text_or_default(self, name: str, default_text: str) -> str:
+        prompt = await self.get_or_create_by_name(name, default_text)
+        if not prompt.text:
+            logger.error('Prompt text is empty for prompt name: %s', name)
+            return default_text
+        return prompt.text
+
     async def update_text_by_name(self, name: str, new_text: str) -> None:
-        result = await self.session.execute(select(self.model).where(self.model.name == name))
-        prompt = result.scalar_one_or_none()
-        if prompt:
-            prompt.text = new_text
-            await self.session.commit()
+        prompt = await self.get_or_create_by_name(name, new_text)
+        prompt.text = new_text
+        await self.session.commit()
 
 
 class WordProgressManager(Manager[WordProgress]):

@@ -1,4 +1,7 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from typing import TypeVar
 
 from httpx import AsyncClient
 from openai import (
@@ -7,16 +10,38 @@ from openai import (
     APITimeoutError,
     AsyncOpenAI,
     AuthenticationError,
+    Omit,
     OpenAIError,
     RateLimitError,
+    omit,
 )
+from openai.types.shared_params import Reasoning
+from pydantic import BaseModel
 
-from constants import DEFAULT_TRANSLATE_PROMPT, OPENAI_API_KEY, OPENAI_MODEL, PROXY_URL, PromptName
+from constants import (
+    DEFAULT_TRANSLATE_PROMPT,
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
+    OPENAI_TRANSCRIBE_MODEL,
+    PROXY_URL,
+    PromptName,
+)
 from core.data_types import TranslationResponse, WordData
 from core.loggers import app_logger as logger
 from database.database import db
 from database.managers import PromptManager, WordManager, WordProgressManager
 from utils import has_russian
+
+ResponseT = TypeVar('ResponseT', bound=BaseModel)
+
+OPENAI_ERROR_MESSAGES: list[tuple[type[Exception], str]] = [
+    (AuthenticationError, 'OpenAI API key is invalid or does not have access to the selected model.'),
+    (RateLimitError, 'OpenAI API rate limit exceeded. Try again later.'),
+    (APITimeoutError, 'OpenAI API did not respond in time. Try again.'),
+    (APIConnectionError, 'Could not connect to OpenAI API. Try again later.'),
+    (APIStatusError, 'OpenAI API returned an error with status {status_code}. Try again later.'),
+    (OpenAIError, 'OpenAI API request failed. Try again later.'),
+]
 
 
 @dataclass
@@ -25,15 +50,27 @@ class OpenAIAnswer:
     audio_text: str | None = None
 
 
-async def request_openai(prompt: str) -> TranslationResponse | None:
+def describe_openai_error(error: Exception) -> str:
+    logger.error('OpenAI request failed: %s', error, exc_info=True)
+    for error_type, text in OPENAI_ERROR_MESSAGES:
+        if isinstance(error, error_type):
+            return text.format(status_code=getattr(error, 'status_code', None))
+    return 'Could not process the OpenAI response. Try again.'
+
+
+@asynccontextmanager
+async def openai_client() -> AsyncGenerator[AsyncOpenAI]:
     async with AsyncClient(timeout=None, proxy=PROXY_URL) as http_client:
         async with AsyncOpenAI(api_key=OPENAI_API_KEY, http_client=http_client) as client:
-            response = await client.responses.parse(
-                model=OPENAI_MODEL,
-                input=prompt,
-                text_format=TranslationResponse,
-            )
-    logger.info('Request to OpenAI API successful with model: %s', OPENAI_MODEL)
+            yield client
+
+
+async def request_openai(
+    prompt: str, text_format: type[ResponseT], model: str, reasoning: Reasoning | Omit = omit
+) -> ResponseT | None:
+    async with openai_client() as client:
+        response = await client.responses.parse(model=model, input=prompt, text_format=text_format, reasoning=reasoning)
+    logger.info('Request to OpenAI API successful with model: %s', model)
     if response.output_parsed is None:
         logger.error(
             'OpenAI API response was not parsed. Status: %s, error: %s, output: %s',
@@ -44,6 +81,15 @@ async def request_openai(prompt: str) -> TranslationResponse | None:
     return response.output_parsed
 
 
+async def transcribe(audio: bytes) -> str:
+    async with openai_client() as client:
+        transcription = await client.audio.transcriptions.create(
+            model=OPENAI_TRANSCRIBE_MODEL, file=('voice.ogg', audio), language='en'
+        )
+    logger.info('Transcribed voice with model %s: %s', OPENAI_TRANSCRIBE_MODEL, transcription.text)
+    return transcription.text.strip()
+
+
 @dataclass
 class OpenAIEnglight:
     message: str
@@ -51,12 +97,7 @@ class OpenAIEnglight:
 
     async def get_prompt(self) -> str:
         async with db.async_session() as session:
-            prompt_manager = PromptManager(session)
-            prompt = await prompt_manager.get_or_create_by_name(PromptName.TRANSLATE, DEFAULT_TRANSLATE_PROMPT)
-            if not prompt.text:
-                logger.error('Prompt text is empty for prompt name: %s', PromptName.TRANSLATE)
-                return DEFAULT_TRANSLATE_PROMPT
-            return prompt.text
+            return await PromptManager(session).get_text_or_default(PromptName.TRANSLATE, DEFAULT_TRANSLATE_PROMPT)
 
     @staticmethod
     def is_valid(word_data: WordData) -> bool:
@@ -101,27 +142,8 @@ class OpenAIEnglight:
         try:
             logger.info('Requesting OpenAI API with message: %s', self.message)
             template = await self.get_prompt()
-            response = await request_openai(template.format(message=self.message))
+            response = await request_openai(template.format(message=self.message), TranslationResponse, OPENAI_MODEL)
             logger.info('Received response from OpenAI API: %s', response)
             return await self.process_answer(response)
-        except AuthenticationError as e:
-            logger.error('OpenAI API authentication failed: %s', e)
-            return [OpenAIAnswer(text='OpenAI API key is invalid or does not have access to the selected model.')]
-        except RateLimitError as e:
-            logger.error('OpenAI API rate limit exceeded: %s', e)
-            return [OpenAIAnswer(text='OpenAI API rate limit exceeded. Try again later.')]
-        except APITimeoutError as e:
-            logger.error('OpenAI API request timed out: %s', e)
-            return [OpenAIAnswer(text='OpenAI API did not respond in time. Try again.')]
-        except APIConnectionError as e:
-            logger.error('Could not connect to OpenAI API: %s', e)
-            return [OpenAIAnswer(text='Could not connect to OpenAI API. Try again later.')]
-        except APIStatusError as e:
-            logger.error('OpenAI API returned status %s: %s', e.status_code, e)
-            return [OpenAIAnswer(text=f'OpenAI API returned an error with status {e.status_code}. Try again later.')]
-        except OpenAIError as e:
-            logger.error('OpenAI SDK error: %s', e)
-            return [OpenAIAnswer(text='OpenAI API request failed. Try again later.')]
         except Exception as e:
-            logger.error('Unexpected error while processing OpenAI response: %s', e, exc_info=True)
-            return [OpenAIAnswer(text='Could not process the OpenAI response. Try again.')]
+            return [OpenAIAnswer(text=describe_openai_error(e))]
