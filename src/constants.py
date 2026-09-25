@@ -24,7 +24,7 @@ OPENAI_API_KEY = getenv('OPENAI_API_KEY')
 if not OPENAI_API_KEY:
     raise ValueError('OPENAI_API_KEY environment variable is not set.')
 OPENAI_MODEL = getenv('OPENAI_MODEL', 'gpt-5-nano')
-OPENAI_CHECK_MODEL = getenv('OPENAI_CHECK_MODEL', 'gpt-5-mini')
+OPENAI_CHECK_MODEL = getenv('OPENAI_CHECK_MODEL', 'gpt-5-nano')
 OPENAI_TRANSCRIBE_MODEL = getenv('OPENAI_TRANSCRIBE_MODEL', 'gpt-4o-mini-transcribe')
 MAX_VOICE_SECONDS = 60
 
