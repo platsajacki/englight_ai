@@ -1,10 +1,12 @@
 from os import getenv
 
 from aiogram import Bot, Dispatcher, Router
-from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.session.aiohttp import AiohttpSession
-from telegram.middlewares.retry_after import LimiterMiddleware
+from aiogram.fsm.storage.memory import MemoryStorage
+
 from constants import PROXY_URL
+from telegram.middlewares.retry_after import LimiterMiddleware
+from telegram.middlewares.user import UserMiddleware
 
 TOKEN = getenv('BOT_TOKEN')
 
@@ -18,5 +20,7 @@ dp = Dispatcher(storage=storage)
 
 router = Router()
 router.message.middleware(LimiterMiddleware())
+router.message.outer_middleware(UserMiddleware())
+router.callback_query.outer_middleware(UserMiddleware())
 
 dp.include_router(router)

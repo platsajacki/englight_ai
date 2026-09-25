@@ -16,6 +16,7 @@ REPETITION_INTERVALS = {
     6: timedelta(days=60),
     7: timedelta(days=120),
 }
+LEARNED_LEVEL = len(REPETITION_INTERVALS)
 
 SCHEDULED_TIMES = [time(7, 30), time(12, 30)]
 
@@ -30,9 +31,8 @@ if not DATABASE_URL:
 
 ADMIN_ID = getenv('ADMIN_ID', '0')
 CHAT_ID = getenv('CHAT_ID', '0')
-ALLOWED_CHATS_FROM_ENV = set(getenv('ALLOWED_CHATS', '').split(', '))
-ALLOWED_CHATS_FOR_SAVING_TO_DB = {ADMIN_ID, CHAT_ID}
-ALLOWED_CHATS = ALLOWED_CHATS_FOR_SAVING_TO_DB | ALLOWED_CHATS_FROM_ENV
+ALLOWED_CHATS_FROM_ENV = {chat.strip() for chat in getenv('ALLOWED_CHATS', '').split(',') if chat.strip()}
+ALLOWED_CHATS = {ADMIN_ID, CHAT_ID} | ALLOWED_CHATS_FROM_ENV
 
 PROXY_URL = getenv('PROXY_URL')
 

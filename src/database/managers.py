@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Generic, Optional, Sequence, TypeVar
+from typing import Generic, Iterable, Optional, Sequence, TypeVar
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from constants import UTC
 from core.data_types import WordData
-from database.models import Example, Prompt, Word, WordProgress
+from database.models import Example, Prompt, User, Word, WordProgress
 
 T = TypeVar('T')
 
@@ -35,6 +35,23 @@ class Manager(Generic[T]):
         return result.scalars().all()
 
 
+class UserManager(Manager[User]):
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session, User)
+
+    async def get_or_create(self, telegram_id: int, full_name: str) -> User:
+        result = await self.session.execute(select(self.model).where(self.model.telegram_id == telegram_id))
+        user = result.scalar_one_or_none() or self.model(telegram_id=telegram_id)
+        if user.id is None or user.full_name != full_name:
+            user.full_name = full_name
+            await self.save(user)
+        return user
+
+    async def get_by_telegram_ids(self, telegram_ids: Iterable[int]) -> Sequence[User]:
+        result = await self.session.execute(select(self.model).where(self.model.telegram_id.in_(list(telegram_ids))))
+        return result.scalars().all()
+
+
 class WordManager(Manager[Word]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Word)
@@ -48,6 +65,10 @@ class WordManager(Manager[Word]):
         )
         return result.scalar_one_or_none()
 
+    async def get_or_create_from_data(self, data: WordData) -> Word:
+        word = await self.get_by_word_and_part_of_speech(data.word or '', data.part_of_speech or '')
+        return word or await self.create_from_data(data)
+
     async def create_from_data(self, data: WordData) -> Word:
         word = self.model(
             word=data.word,
@@ -56,21 +77,9 @@ class WordManager(Manager[Word]):
             part_of_speech=data.part_of_speech,
             forms=data.forms,
             explanation=data.explanation,
+            examples=[Example(example=ex.example, translation=ex.translation) for ex in data.examples],
         )
-        if data.examples:
-            for example_data in data.examples:
-                example = Example(
-                    example=example_data.example,
-                    translation=example_data.translation,
-                    word=word,
-                )
-                word.examples.append(example)
-        self.session.add(word)
-        await self.session.flush()
-        word_progress = WordProgress(word_id=word.id)
-        self.session.add(word_progress)
-        await self.session.commit()
-        await self.session.refresh(word)
+        await self.save(word)
         return word
 
     async def get_with_examples(self, word_id: int) -> Optional[Word]:
@@ -114,27 +123,53 @@ class WordProgressManager(Manager[WordProgress]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, WordProgress)
 
-    async def get_next_review_words(self, limit: int = 10) -> Sequence[WordProgress]:
+    async def add_for_user(self, user_id: int, word_id: int) -> None:
+        if await self.get_for_user_and_word(user_id, word_id):
+            return
+        await self.save(self.model(user_id=user_id, word_id=word_id))
+
+    async def get_next_review_words(self, user_id: int, limit: int = 10) -> Sequence[WordProgress]:
         now = datetime.now(tz=UTC)
         results = await self.session.execute(
             select(self.model)
-            .where(self.model.next_review_at <= now)
+            .where(self.model.user_id == user_id, self.model.next_review_at <= now)
             .options(selectinload(self.model.word).selectinload(Word.examples))
             .order_by(self.model.next_review_at)
             .limit(limit)
         )
         return results.scalars().all()
 
-    async def get_with_word(self, progress_id: int) -> Optional[WordProgress]:
+    async def get_for_user_and_word(self, user_id: int, word_id: int) -> Optional[WordProgress]:
         result = await self.session.execute(
-            select(self.model).where(self.model.id == progress_id).options(selectinload(self.model.word))
+            select(self.model)
+            .where(self.model.user_id == user_id, self.model.word_id == word_id)
+            .options(selectinload(self.model.word))
         )
         return result.scalar_one_or_none()
 
-    async def record_review(self, progress_id: int, success: bool) -> Optional[WordProgress]:
-        wp = await self.get_with_word(progress_id)
+    async def all_for_user(self, user_id: int) -> Sequence[WordProgress]:
+        result = await self.session.execute(select(self.model).where(self.model.user_id == user_id))
+        return result.scalars().all()
+
+    async def find_for_user_by_word(self, user_id: int, word: str) -> Sequence[WordProgress]:
+        result = await self.session.execute(
+            select(self.model)
+            .join(self.model.word)
+            .where(self.model.user_id == user_id, func.lower(Word.word) == word.lower())
+            .options(selectinload(self.model.word))
+        )
+        return result.scalars().all()
+
+    async def record_review(self, user_id: int, word_id: int, success: bool) -> Optional[WordProgress]:
+        wp = await self.get_for_user_and_word(user_id, word_id)
         if wp:
             wp.record_review(success)
             await self.session.commit()
-            await self.session.refresh(wp)
+        return wp
+
+    async def delete_for_user(self, user_id: int, word_id: int) -> Optional[WordProgress]:
+        wp = await self.get_for_user_and_word(user_id, word_id)
+        if wp:
+            await self.session.delete(wp)
+            await self.session.commit()
         return wp

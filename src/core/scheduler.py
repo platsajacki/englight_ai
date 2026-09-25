@@ -1,39 +1,50 @@
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import BufferedInputFile
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from constants import ADMIN_ID, SCHEDULED_TIMES, UTC
+from constants import ALLOWED_CHATS, SCHEDULED_TIMES, UTC
+from core.loggers import app_logger as logger
 from database.database import db
-from database.managers import WordProgressManager
+from database.managers import UserManager, WordProgressManager
+from database.models import User, Word
 from telegram.bot import bot
 from telegram.buttons import make_know_or_not_buttons
 from utils import text_to_speech
 
 
+class ReviewSender:
+    async def send_all(self) -> None:
+        for user in await self.get_allowed_users():
+            try:
+                await self.send_to_user(user)
+            except (TelegramForbiddenError, TelegramBadRequest) as e:
+                logger.warning('Could not send word reviews to user %s: %s', user.telegram_id, e)
+            except Exception as e:
+                logger.error('Failed to send word reviews to user %s: %s', user.telegram_id, e, exc_info=True)
+
+    @staticmethod
+    async def get_allowed_users() -> list[User]:
+        telegram_ids = [int(chat) for chat in ALLOWED_CHATS if chat.lstrip('-').isdigit()]
+        async with db.async_session() as session:
+            return list(await UserManager(session).get_by_telegram_ids(telegram_ids))
+
+    async def send_to_user(self, user: User) -> None:
+        async with db.async_session() as session:
+            word_progresses = await WordProgressManager(session).get_next_review_words(user.id)
+        for word_progress in word_progresses:
+            if word_progress.word.word:
+                await self.send_word(user.telegram_id, word_progress.word)
+
+    @staticmethod
+    async def send_word(chat_id: int, word: Word) -> None:
+        audio = await text_to_speech(word.word or '')
+        await bot.send_voice(chat_id=chat_id, voice=BufferedInputFile(audio, filename=f'{word.word}.mp3'))
+        await bot.send_message(chat_id=chat_id, text=word.word or '', reply_markup=make_know_or_not_buttons(word.id))
+
+
 def setup_scheduler():
     scheduler = AsyncIOScheduler(timezone=UTC)
     for t in SCHEDULED_TIMES:
-        scheduler.add_job(send_word_reviews, 'cron', hour=t.hour, minute=t.minute)
+        scheduler.add_job(ReviewSender().send_all, 'cron', hour=t.hour, minute=t.minute)
     scheduler.start()
-
-
-async def send_word_reviews():
-    async with db.async_session() as session:
-        word_progress_manager = WordProgressManager(session)
-        word_progresses = await word_progress_manager.get_next_review_words()
-        if not word_progresses:
-            await bot.send_message(chat_id=ADMIN_ID, text='No words to review at this time.')
-            return
-        for word_progress in word_progresses:
-            if not word_progress.word.word:
-                continue
-            audio = await text_to_speech(word_progress.word.word)
-            await bot.send_voice(
-                chat_id=ADMIN_ID,
-                voice=BufferedInputFile(audio, filename=f'{word_progress.word.word}.mp3'),
-            )
-            await bot.send_message(
-                chat_id=ADMIN_ID,
-                text=word_progress.word.word,
-                reply_markup=make_know_or_not_buttons(word_progress.word.id),
-            )

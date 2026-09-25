@@ -28,3 +28,12 @@ def make_sure_buttons(word_id: int, is_know: bool) -> InlineKeyboardMarkup:
         ]
     )
     return InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
+
+
+def make_delete_buttons(words: list[tuple[int, str]]) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=part_of_speech, callback_data=f'delete_{word_id}')]
+            for word_id, part_of_speech in words
+        ]
+    )

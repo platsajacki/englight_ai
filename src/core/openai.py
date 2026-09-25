@@ -15,7 +15,7 @@ from constants import DEFAULT_TRANSLATE_PROMPT, OPENAI_API_KEY, OPENAI_MODEL, PR
 from core.data_types import TranslationResponse, WordData
 from core.loggers import app_logger as logger
 from database.database import db
-from database.managers import PromptManager, WordManager
+from database.managers import PromptManager, WordManager, WordProgressManager
 from utils import has_russian
 
 
@@ -47,7 +47,7 @@ async def request_openai(prompt: str) -> TranslationResponse | None:
 @dataclass
 class OpenAIEnglight:
     message: str
-    save_to_db: bool = True
+    user_id: int | None = None
 
     async def get_prompt(self) -> str:
         async with db.async_session() as session:
@@ -58,37 +58,35 @@ class OpenAIEnglight:
                 return DEFAULT_TRANSLATE_PROMPT
             return prompt.text
 
-    async def create_word_object(self, word_data: WordData) -> None:
+    @staticmethod
+    def is_valid(word_data: WordData) -> bool:
+        if not word_data.word:
+            logger.error('Word is empty: %s', word_data)
+            return False
+        if not word_data.part_of_speech:
+            logger.error('Part of speech is empty: %s', word_data)
+            return False
+        if has_russian(word_data.word):
+            logger.error('Word contains Russian characters: %s', word_data.word)
+            return False
+        return True
+
+    async def save_for_user(self, word_data: WordData, user_id: int) -> None:
         try:
-            if not word_data.word:
-                logger.error('Word is empty: %s', word_data)
-                return
-            if not word_data.part_of_speech:
-                logger.error('Part of speech is empty: %s', word_data)
-                return
-            if has_russian(word_data.word):
-                logger.error('Word contains Russian characters: %s', word_data.word)
+            if not self.is_valid(word_data):
                 return
             async with db.async_session() as session:
-                manager = WordManager(session)
-                word = await manager.get_by_word_and_part_of_speech(word_data.word, word_data.part_of_speech)
-                if word:
-                    logger.info(
-                        'Word object already exists for word: %s, part of speech: %s',
-                        word_data.word,
-                        word_data.part_of_speech,
-                    )
-                    return
-                await manager.create_from_data(word_data)
+                word = await WordManager(session).get_or_create_from_data(word_data)
+                await WordProgressManager(session).add_for_user(user_id, word.id)
         except Exception as e:
-            logger.error('Error creating word object from WordData: %s\nError: %s', word_data, e)
+            logger.error('Error saving word for user %s from WordData: %s\nError: %s', user_id, word_data, e)
 
     async def create_messages(self, words: list[WordData]) -> list[OpenAIAnswer]:
         messages = []
         for word_data in words:
-            if self.save_to_db:
-                logger.info('Creating WordData object for word: %s', word_data.word)
-                await self.create_word_object(word_data)
+            if self.user_id is not None:
+                logger.info('Saving word "%s" for user %s', word_data.word, self.user_id)
+                await self.save_for_user(word_data, self.user_id)
             messages.append(OpenAIAnswer(text=word_data.create_message(), audio_text=word_data.word))
         return messages
 

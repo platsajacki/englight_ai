@@ -1,12 +1,12 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from constants import REPETITION_INTERVALS, UTC
+from constants import LEARNED_LEVEL, REPETITION_INTERVALS, UTC
 from core.data_types import ExampleData, WordData
 
 
@@ -14,8 +14,21 @@ def default_next_review():
     return datetime.now(tz=UTC) + REPETITION_INTERVALS[0]
 
 
+def utc_now():
+    return datetime.now(tz=UTC)
+
+
 class Base(AsyncAttrs, DeclarativeBase):
     pass
+
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+    full_name: Mapped[Optional[str]] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class Prompt(Base):
@@ -78,6 +91,7 @@ class WordProgress(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     word_id: Mapped[int] = mapped_column(ForeignKey('words.id', ondelete='CASCADE'))
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'))
     review_history: Mapped[list[str]] = mapped_column(
         MutableList.as_mutable(JSON),
         default=list,
@@ -90,15 +104,20 @@ class WordProgress(Base):
 
     word: Mapped['Word'] = relationship()
 
+    __table_args__ = (UniqueConstraint('user_id', 'word_id', name='uq_word_progress_user_id_word_id'),)
+
     @property
     def repetitions(self) -> int:
         return min(len(self.review_history), max(REPETITION_INTERVALS.keys()))
 
     @property
+    def is_learned(self) -> bool:
+        return len(self.review_history) >= LEARNED_LEVEL
+
+    @property
     def next_review(self) -> datetime:
-        if self.next_review_at:
-            return self.next_review_at
-        return self.count_next_review()
+        next_review = self.next_review_at or self.count_next_review()
+        return next_review if next_review.tzinfo else next_review.replace(tzinfo=UTC)
 
     def count_next_review(self, from_time: Optional[datetime] = None) -> datetime:
         interval = REPETITION_INTERVALS[self.repetitions]
